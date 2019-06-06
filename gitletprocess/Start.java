@@ -1,18 +1,16 @@
 package gitletprocess;
 
 import java.io.*;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class Start {
-    private static String initialDate = "00:00:00UTC,01/1970";
+    private static int counter = 1;
     private static HashSet<String> commandList = new HashSet<>();
+    private static Commit pointer;
 
     private static void setCommandList() {
         if (commandList.isEmpty()) {
@@ -36,15 +34,24 @@ public class Start {
     private static void initCommand() {
         File dir = new File(".gitlet");
         if (!dir.exists()) {
-            //Commit newCommit = new Commit(initialDate, "initial commit", "master", null, null);
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            Date date = new Date(); // get date
+            String initialDate = date.toString();
             dir.mkdir(); // need to figure out how to do commits
+
+            Commit newCommit = new Commit(initialDate, "initial commit", null, null);
+            newCommit.setParent(pointer);
+
+            File first = new File(".gitlet/" + "0");
+            first.mkdir();
+            pointer = newCommit;
         } else {
             System.out.println("A Gitlet version-control system already exists in the current directory.");
         }
 
     }
 
-    private static byte[] convToBytes(File file) {
+    public static byte[] convToBytes(File file) {
         try {
             byte[] copyArray = new byte[(int) file.length()];
             FileInputStream f = new FileInputStream(file);
@@ -89,6 +96,10 @@ public class Start {
         }
     }
 
+    private static void copyFolder(File source, File destination) {
+        //just do a for loop of copyfile
+    }
+
     private static void addCommand(String file) {
         File add = new File(file);
         if (!add.exists()) {
@@ -103,7 +114,11 @@ public class Start {
             File check = new File(".gitlet/stageProcess");
             if (check.exists()) {
                 try {
-                    copyFile(add, check);
+                    if (file.contains(".")) {
+                        copyFile(add, check);
+                    } else {
+                        copyFolder(add, check);
+                    }
                 } catch (IOException i) {
                     System.out.println("File does not exist");
                 }
@@ -112,7 +127,34 @@ public class Start {
         }
     }
 
-    private static void commitCommand() {
+    private static void commitCommand(String message) {
+
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date(); // get date
+        String newDate = dateFormat.format(date);
+
+        File stageProcess = new File(".gitlet/stageProcess");
+        File[] files = stageProcess.listFiles();
+        
+        String directFilePath = ".gitlet/" + Integer.toString(counter);
+        counter += 1;
+        File newDirect = new File(directFilePath);
+        newDirect.mkdir();
+
+        for (File f : files) {
+            try {
+                copyFile(f, new File(directFilePath + "/" + f.getName()));
+            } catch (IOException i) {
+                System.out.println("Cannot commit something broke");
+            }
+        } // copies file to new directory
+
+        for (File f : files) {
+            f.delete();
+        }  // deletes files in stageProcess
+    }
+
+    private static void removeCommand() {
 
     }
 
@@ -139,9 +181,15 @@ public class Start {
                     addCommand(file);
                     break;
                 case "commit":
-                    commitCommand();
+                    if (file != "") {
+                        commitCommand(file);
+                    } else {
+                        System.out.println("Please enter a message");
+                    }
                     break;
                 case "rm":
+                    removeCommand();
+                    break;
                 case "log":
                 case "global-log":
                 case "find":
@@ -155,3 +203,5 @@ public class Start {
         }
     }
 }
+
+
