@@ -1,10 +1,14 @@
 package gitletprocess;
 
-import org.wildfly.swarm.config.IO;
-
 import java.io.*;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class Start {
     private static String initialDate = "00:00:00UTC,01/1970";
@@ -32,12 +36,57 @@ public class Start {
     private static void initCommand() {
         File dir = new File(".gitlet");
         if (!dir.exists()) {
-            Commit newCommit = new Commit(initialDate, "initial commit", "master", null, null);
+            //Commit newCommit = new Commit(initialDate, "initial commit", "master", null, null);
             dir.mkdir(); // need to figure out how to do commits
         } else {
             System.out.println("A Gitlet version-control system already exists in the current directory.");
         }
 
+    }
+
+    private static byte[] convToBytes(File file) {
+        try {
+            byte[] copyArray = new byte[(int) file.length()];
+            FileInputStream f = new FileInputStream(file);
+            f.read(copyArray); //read file into bytes[]
+            f.close(); //replace with method later
+            return copyArray;
+        } catch (IOException f) {
+            System.out.println("File does not exist.");
+        }
+        return null;
+    }
+
+    private static String getPrefix(String name) {
+        int cutoff = name.indexOf('.');
+        return name.substring(0, cutoff);
+    }
+
+    private static String getSuffix (String name) {
+        int cutoff = name.indexOf('.');
+        return name.substring(cutoff);
+    }
+
+    private static void copyFile(File source, File destination) throws IOException {
+        InputStream is = null;
+        OutputStream os = null;
+        try {
+            String prefix = getPrefix(source.getName());
+            String suffix = getSuffix(source.getName());
+            if (!destination.exists()) {
+                File.createTempFile(prefix, suffix, destination);
+            }
+            is = new FileInputStream(source);
+            os = new FileOutputStream(destination + "/" + prefix + suffix);
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = is.read(buffer)) > 0) {
+                os.write(buffer, 0, length);
+            }
+        } finally {
+            is.close();
+            os.close();
+        }
     }
 
     private static void addCommand(String file) {
@@ -47,20 +96,19 @@ public class Start {
         } else if (!new File(".gitlet").exists()) {
             System.out.println("This directory is not a gitlet directory");
         } else {
-            try {
-                byte[] bytesArray = new byte[(int) add.length()];
-
-                FileInputStream fis = new FileInputStream(file);
-                fis.read(bytesArray); //read file into bytes[]
-                fis.close();
-
-                Blob newFile = new Blob(bytesArray);
-
-                //add to staging area in .gitlet which should exist
-
-            } catch (IOException f) {
-                System.out.println("File does not exist.");
+            if (!(new File(".gitlet/stageProcess").exists())) {
+                File stageProcess = new File(".gitlet/stageProcess");
+                stageProcess.mkdir();
+            } //create new staging area if it does not already exist
+            File check = new File(".gitlet/stageProcess");
+            if (check.exists()) {
+                try {
+                    copyFile(add, check);
+                } catch (IOException i) {
+                    System.out.println("File does not exist");
+                }
             }
+
         }
     }
 
@@ -71,6 +119,7 @@ public class Start {
     public static void main(String[] args) {
         String command = "";
         String file = "";
+        setCommandList();
         if (args.length == 0) {
             System.out.println("Please enter a command");
             return;
@@ -85,9 +134,13 @@ public class Start {
             switch (command) {
                 case "init" :
                     initCommand();
+                    break;
                 case "add":
                     addCommand(file);
+                    break;
                 case "commit":
+                    commitCommand();
+                    break;
                 case "rm":
                 case "log":
                 case "global-log":
