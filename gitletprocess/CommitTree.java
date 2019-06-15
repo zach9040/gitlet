@@ -269,11 +269,54 @@ public class CommitTree implements Serializable {
             //used to check for untracked files
         } else {
             Branch merge = branchList.get(branchName);
-            if (merge.split.equals(currentBranch.head)) {
+            Commit split = merge.split;
+            if (split.equals(merge.head)) {
                 System.out.println("Given branch is an ancestor of current branch.");
                 return;
+            } else if (split.equals(currentBranch.head)) {
+                currentBranch.head = merge.head;
+                System.out.println("Current branch fast forwarded.");
+                return;
             }
-            
+            //Any files that have been modified in the
+            // given branch since the split point, but not modified in the
+            // current branch since the split point should be changed to their versions in the given branch
+            // (checked out from the commit at the front of the given branch). These files should then all
+            // be automatically staged. To clarify, if a file is "modified in the given branch since the
+            // split point" this means the version of the file
+            // as it exists in the commit at the front of the given branch has different content from the
+            // version of the file at the split point.
+            for (String files : merge.head.getFiles().keySet()) {
+                //merge.head.getFiles().get(files)
+            }
+            // checkout files not present at split point and present
+            //only in given branch
+            for (String files : currentBranch.head.getFiles().keySet()) {
+                if (!split.getFiles().containsKey(files)) {
+                    overwriteFile("--", files);
+                    stageList.add(files);
+                }
+            }
+            //Any files present at the split point,
+            //unmodified in the current branch,
+            // and absent in the given branch should
+            // be removed (and untracked).
+            for (String files : split.getFiles().keySet()) {
+                if (!currentBranch.head.getFiles().containsKey(files)) {
+                    File file = new File(GITLET + currentBranch.head.getDirNum() + "/" + files);
+                    if (file.exists()) {
+                        byte[] copyArray = Utils.readContents(file);
+                        if (copyArray.equals(split.getFiles().get(files).getContents())) {
+                            file.deleteOnExit();
+                            if (stageList.contains(files)) {
+                                stageList.remove(files);
+                            }
+                        }
+                    }
+                }
+            }
+
+
         }
     }
 }
