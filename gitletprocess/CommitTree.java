@@ -116,9 +116,9 @@ public class CommitTree implements Serializable {
     public void printStatus() {
         System.out.println("=== Branches ===");
         System.out.println("*" + currentBranch.getTitle());
-        for (Branch b : branchList.values()) {
-            if (!currentBranch.equals(b)) {
-                System.out.println(b.getTitle());
+        for (String b : branchList.keySet()) {
+            if (!currentBranch.getTitle().equals(b)) {
+                System.out.println(b);
             }
         }
         System.out.println();
@@ -139,7 +139,29 @@ public class CommitTree implements Serializable {
     }
 
     public void switchBranch(String branchName) {
-        currentBranch = branchList.get(branchName);
+        if (currentBranch.getTitle().equals(branchName)) {
+            System.out.println("No need to checkout the current branch.");
+            return;
+        }
+        if (!branchList.containsKey(branchName)) {
+            System.out.println("The branch does not exist");
+            return;
+        }
+        HashMap<String, Blob> fileMap = currentBranch.head.getFiles();
+        for (String name : fileMap.keySet()) {
+            Utils.writeContents(new File(name),fileMap.get(name).getContents());
+        }
+        Branch checkout = branchList.get(branchName);
+        for (String file : fileMap.keySet()) {
+            if (!checkout.head.getFiles().containsKey(file)) {
+                File remove = new File(file);
+                if (remove.exists()) {
+                    remove.deleteOnExit();
+                }
+            }
+        }
+        currentBranch = checkout;
+        stageList.clear();
     }
 
     public void removeBranch(String branchName) {
@@ -165,5 +187,93 @@ public class CommitTree implements Serializable {
         }
         Branch newBranch = new Branch(currentBranch.head, branchName, this);
         branchList.put(branchName, newBranch);
+        System.out.println(branchList.keySet());
+    }
+
+    public Commit findCommit(String commitID) {
+        for (Branch b : branchList.values()) {
+            Commit copy = b.head;
+            while (copy != null) {
+                if (Integer.toString(copy.getDirNum()).equals(commitID)) {
+                    return copy;
+                }
+                copy = copy.getParent1();
+            }
+        }
+        return null;
+    }
+
+    public void overwriteFile(String check, String fileName) {
+        overwriteFile(check, fileName, null);
+    }
+
+    public void overwriteFile(String check, String fileName, String commitID) {
+        if (!check.equals("--")) {
+            System.out.println("Not a valid command.");
+            return;
+        }
+        Commit usedCommit = currentBranch.head;
+        if (commitID != null) {
+            usedCommit = findCommit(commitID);
+            if (usedCommit == null) {
+                System.out.println("No commit with this ID exxists.");
+            }
+        }
+        byte[] copyArray = null;
+        String newFilePath = "";
+        for (String files : usedCommit.getFiles().keySet()) {
+            if (fileName.equals(files)) {
+                String dirPath = GITLET + usedCommit.getDirNum() + "/" + fileName;
+                File file = new File(dirPath);
+                if (file.exists()) {
+                    newFilePath = files;
+                    copyArray = Utils.readContents(file);
+                }
+            }
+        }
+        if (newFilePath != "" && copyArray != null) {
+            Utils.writeContents(new File(newFilePath), copyArray);
+        } else {
+            System.out.println("File does not exist in this commit.");
+        }
+    }
+
+    public void resetTree(String commitID) {
+        Commit commit = findCommit(commitID);
+        if (commit == null) {
+            System.out.println("No commit with that ID exists");
+            return;
+        }
+        //NEED TO TAKE INTO ACCOUNT UNTRACKED FILES AS WELL
+        for (String files : currentBranch.head.getFiles().keySet()) {
+            overwriteFile("--", files);
+            if (!commit.getFiles().containsKey(files)) {
+                File remove = new File(GITLET + commit.getDirNum());
+                if (remove.exists()) {
+                    remove.deleteOnExit();
+                }
+            }
+        }
+        currentBranch.head = commit;
+        stageList.clear();
+    }
+
+    public void mergeBranches(String branchName) {
+        if (branchName.equals(currentBranch.getTitle())) {
+            System.out.println("Cannot merge branch with itself.");
+        } else if (!stageList.isEmpty() || !removeList.isEmpty()) {
+            System.out.println("You have uncommitted changes.");
+        } else if (!branchList.containsKey(branchName)) {
+            System.out.println("A branch of that name doesn't exist.");
+        } else if (false) {
+            //used to check for untracked files
+        } else {
+            Branch merge = branchList.get(branchName);
+            if (merge.split.equals(currentBranch.head)) {
+                System.out.println("Given branch is an ancestor of current branch.");
+                return;
+            }
+            
+        }
     }
 }

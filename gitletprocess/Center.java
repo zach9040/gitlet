@@ -120,10 +120,25 @@ public class Center {
                 repository.printStatus();
                 break;
             case "reset":
+                if (args.length == 2 && file != null) {
+                    repository.resetTree(file);
+                }
                 break;
             case "checkout":
+                if (args.length == 2) {
+                    repository.switchBranch(file);
+                } else if (args.length == 3) {
+                    repository.overwriteFile(file, args[2]);
+                } else if (args.length == 4) {
+                    repository.overwriteFile(args[2], args[3], file);
+                } else {
+                    System.out.println("Command not valid.");
+                }
                 break;
             case "merge":
+                if (args.length == 2 && file != null) {
+                    repository.mergeBranches(file);
+                }
                 break;
             default :
                 System.out.println("Please enter a real command.");

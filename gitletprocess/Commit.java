@@ -37,8 +37,7 @@ public class Commit implements Serializable {
         System.out.println("commit " + getDirNum());
         System.out.println("Date: " + dateTime);
         System.out.println(message);
-        System.out.println();
-        return null;
+        return "";
     }
 
     public int getDirNum() {
@@ -52,8 +51,6 @@ public class Commit implements Serializable {
     public String getMessage() {
         return message;
     }
-
-    //placeholders
 
 
 }

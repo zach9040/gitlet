@@ -11,6 +11,7 @@ public class Branch implements Serializable {
     private String title;
     public Commit head;
     private CommitTree repo;
+    public Commit split;
     private static final String GITLET = ".gitlet/";
     private static final String stageProcess = ".gitlet/stageProcess/";
 
@@ -18,6 +19,7 @@ public class Branch implements Serializable {
         this.title = title;
         head = commit;
         this.repo = repo;
+        split = commit;
     }
 
     public void addToBranch(String message) { //commit
