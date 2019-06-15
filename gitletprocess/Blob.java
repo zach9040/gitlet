@@ -1,10 +1,8 @@
 package gitletprocess;
 
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.io.Serializable;
 
-public class Blob {
+public class Blob implements Serializable {
 
     private byte[] contents;
 
@@ -16,29 +14,4 @@ public class Blob {
         return contents;
     }
 
-    public String SHA1() {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
-            byte[] messageDigest = md.digest(contents);
-            BigInteger no = new BigInteger(1, messageDigest);
-            String hashtext = no.toString(16);
-            while (hashtext.length() < 32) {
-                hashtext = "0" + hashtext;
-            }
-            return hashtext;
-        }
-
-        // For specifying wrong message digest algorithms
-        catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public int hashCode() {
-        return (this.SHA1() + "blob").hashCode();
-    }
-
-    public boolean equals(Object o) {
-        return true;
-    }
 }
